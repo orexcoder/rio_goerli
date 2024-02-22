@@ -45,20 +45,28 @@ def deposite(key):
     estimated_gas = web3.eth.estimate_gas(tx)
     tx['gas'] = estimated_gas
 
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+    signed_tx = web3.eth.account.sign_transaction(tx, key)
 
     # Send the transaction
+
     try:
         tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
+
+        print('Ждем подтверждения депозита', end='')
 
         is_approve = web3.eth.wait_for_transaction_receipt(web3.to_hex(tx_hash), timeout=120,
                                                            poll_latency=0.1).status
         if is_approve == 1:
-
             cprint(f'\n>>> Transaction success | https://goerli.etherscan.io/tx/{tx_hash.hex()} ', 'green')
 
+            return True
+        else:
+            cprint(f'\n>>> Transaction on private key {key} failed | https://goerli.etherscan.io/tx/{tx_hash.hex()}', 'red')
+            return False
+
     except Exception as e:
-        cprint(f'\n>>> Transaction failed {private_key} | \n{str(e)}', 'red')
+        cprint(f'\n>>> Transaction on private key {key} failed  | \n{str(e)}', 'red')
+        return False
 
 
 def withdrawl(key):
@@ -85,21 +93,29 @@ def withdrawl(key):
     estimated_gas = web3.eth.estimate_gas(tx)
     tx['gas'] = estimated_gas
 
-    signed_tx = web3.eth.account.sign_transaction(tx, private_key)
+    signed_tx = web3.eth.account.sign_transaction(tx, key)
 
     # Send the transaction
+
     try:
 
         tx_hash = web3.eth.send_raw_transaction(signed_tx.rawTransaction)
 
+        print('Ждем подтверждения вывода', end='')
+
         is_approve = web3.eth.wait_for_transaction_receipt(web3.to_hex(tx_hash), timeout=120,
                                                            poll_latency=0.1).status
         if is_approve == 1:
-
             cprint(f'\n>>> Transaction success | https://goerli.etherscan.io/tx/{tx_hash.hex()} ', 'green')
+            return True
+
+        else:
+            cprint(f'\n>>> Transaction on private key {key} failed | https://goerli.etherscan.io/tx/{tx_hash.hex()}', 'red')
+            return False
 
     except Exception as e:
-        cprint(f'\n>>> Transaction failed {private_key} | \n{str(e)}', 'red')
+        cprint(f'\n>>> Transaction failed {key} | \n{str(e)}', 'red')
+        return False
 
 
 def append_success_key(key):
@@ -115,27 +131,27 @@ def main():
     for key in private_keys:
         try:
             tx_count = random.randint(iterations_from, iterations_to)
-            deposite(key)
+            success_first_dep = deposite(key)
+            if not success_first_dep:
+                continue
             time_to_sleep = random.randint(time_sleep_from, time_sleep_to)
-            cprint(f'Сплю {time_to_sleep} секунд между транзами', 'blue')
+            cprint(f'Сплю {time_to_sleep} секунд', 'blue')
             time.sleep(time_to_sleep)
             for i in range(tx_count):
                 type_tx = random.randint(1, 2)
                 if type_tx == 1:
                     deposite(key)
                 else:
-                    withdrawl(key)
+                   withdrawl(key)
                 time_to_sleep = random.randint(time_sleep_from, time_sleep_to)
                 cprint(f'Сплю {time_to_sleep} секунд между транзами', 'blue')
                 time.sleep(time_to_sleep)
             append_success_key(key)
         except Exception as e:
-            cprint(f"Ошибка на приватнике {private_key}, перехожу к следующему: \n{str(e)}", 'red')
+            cprint(f"Ошибка на приватнике {key}, перехожу к следующему: \n{str(e)}", 'red')
     time_to_sleep_between_accs = random.randint(acc_time_sleep_from, acc_time_sleep_to)
     cprint(f'Сплю {time_to_sleep_between_accs} секунд между акками', 'blue')
     time.sleep(time_to_sleep_between_accs)
-
-
 
 
 if __name__ == '__main__':
